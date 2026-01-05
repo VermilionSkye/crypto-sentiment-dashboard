@@ -22,7 +22,7 @@ This project demonstrates a decoupled "Producer-Consumer" architecture:
 ## Setup Instructions
 
 ### Prerequisites
-* AWS Account (Free Tier)
+* AWS Account (Free Tier works)
 * Groq Cloud API Key
 * NewsAPI Key
 * Python 3.12 installed locally
@@ -31,7 +31,7 @@ This project demonstrates a decoupled "Producer-Consumer" architecture:
 
 1.  Clone the repository:
     ```bash
-    git clone [https://github.com/VermilionSkye/crypto-sentiment-dashboard.git](https://github.com/VermilionSkye/crypto-sentiment-dashboard.git)
+    git clone [https://github.com/VermilionSkye/crypto-sentiment-dashboard.git]
     cd crypto-sentiment-dashboard
     ```
 
