@@ -55,4 +55,4 @@ This project demonstrates a decoupled "Producer-Consumer" architecture:
 
 ## Live Demo
 
-[Insert URL later]
+[https://crypto-sentiment-dashboard-vs.streamlit.app/]

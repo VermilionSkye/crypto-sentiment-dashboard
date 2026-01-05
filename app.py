@@ -25,7 +25,7 @@ def get_db_connection():
 def get_sentiment_data():
     conn = get_db_connection()
     if conn:
-        #latest 50 records
+        # latest 50 records
         query = """
             SELECT headline, sentiment, score, reason, created_at 
             FROM raw_data.crypto_sentiment
@@ -56,7 +56,7 @@ if not df.empty:
     col1, col2, col3 = st.columns(3)
     
     # Color logic for the metrics
-    delta_color = "off" # Default grey
+    delta_color = "off" 
     if latest['sentiment'] == "POSITIVE": delta_color = "normal" # Green
     if latest['sentiment'] == "NEGATIVE": delta_color = "inverse" # Red
     
