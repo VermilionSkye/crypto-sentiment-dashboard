@@ -6,7 +6,7 @@ import altair as alt
 # --- CONFIG ---
 st.set_page_config(page_title="Crypto Sentiment AI", page_icon="🧠", layout="wide")
 
-# --- DB CONNECTION (Reusing your Secrets) ---
+# --- DB CONNECTION ---
 @st.cache_resource
 def get_db_connection():
     try:
@@ -25,7 +25,7 @@ def get_db_connection():
 def get_sentiment_data():
     conn = get_db_connection()
     if conn:
-        # We fetch the latest 50 records
+        #latest 50 records
         query = """
             SELECT headline, sentiment, score, reason, created_at 
             FROM raw_data.crypto_sentiment
@@ -68,7 +68,7 @@ if not df.empty:
     st.divider()
     st.subheader("Sentiment Trend (Last 50 News Items)")
     
-    # We map sentiment text to colors manually
+    
     chart = alt.Chart(df).mark_circle(size=100).encode(
         x=alt.X('created_at', title='Time'),
         y=alt.Y('score', title='Sentiment Score (-1 to 1)'),
@@ -83,7 +83,6 @@ if not df.empty:
     st.subheader("🔍 Analyst Logs (Llama 3 Reasoning)")
     
     for index, row in df.iterrows():
-        # Emoji based on sentiment
         icon = "⚪"
         if row['sentiment'] == "POSITIVE": icon = "🟢"
         if row['sentiment'] == "NEGATIVE": icon = "🔴"
