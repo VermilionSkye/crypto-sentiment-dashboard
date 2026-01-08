@@ -25,12 +25,12 @@ def get_db_connection():
 def get_sentiment_data():
     conn = get_db_connection()
     if conn:
-        # latest 50 records
+        # NOW FETCHING 'btc_price' TOO
         query = """
-            SELECT headline, sentiment, score, reason, created_at 
+            SELECT headline, sentiment, score, reason, btc_price, created_at 
             FROM raw_data.crypto_sentiment
             ORDER BY created_at DESC
-            LIMIT 50
+            LIMIT 100
         """
         df = pd.read_sql(query, conn)
         conn.close()
@@ -39,49 +39,61 @@ def get_sentiment_data():
 
 # --- DASHBOARD UI ---
 st.title("🧠 AI Crypto Analyst")
-st.caption("Tracking Bitcoin Sentiment using Llama 3 & AWS Lambda")
+st.caption("Correlating Bitcoin News Sentiment with Price Action")
 
-# 1. Refresh Button
+# 1. Refresh
 if st.button("🔄 Refresh Data"):
     st.cache_data.clear()
     st.rerun()
 
-# 2. Load Data
 df = get_sentiment_data()
 
 if not df.empty:
-    # 3. Key Metrics
+    # 2. Key Metrics
     latest = df.iloc[0]
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
-    # Color logic for the metrics
-    delta_color = "off" 
-    if latest['sentiment'] == "POSITIVE": delta_color = "normal" # Green
-    if latest['sentiment'] == "NEGATIVE": delta_color = "inverse" # Red
+    # Sentiment Color
+    sent_color = "off"
+    if latest['sentiment'] == "POSITIVE": sent_color = "normal"
+    if latest['sentiment'] == "NEGATIVE": sent_color = "inverse"
     
-    col1.metric("Latest Sentiment", latest['sentiment'], f"{latest['score']:.2f}", delta_color=delta_color)
-    col2.metric("Data Points Analyzed", len(df))
-    col3.info(f"Latest Headline:\n\n_{latest['headline']}_")
+    col1.metric("Latest Sentiment", latest['sentiment'], f"{latest['score']:.2f}", delta_color=sent_color)
+    col2.metric("BTC Price", f"${latest['btc_price']:,.2f}") # NEW METRIC
+    col3.metric("Data Points", len(df))
+    col4.markdown(f"**Latest News:**\n_{latest['headline'][:50]}..._")
 
-    # 4. The Chart
+    # 3. THE DUAL-AXIS CHART
     st.divider()
-    st.subheader("Sentiment Trend (Last 50 News Items)")
+    st.subheader("Sentiment vs. Price Correlation")
     
-    
-    chart = alt.Chart(df).mark_circle(size=100).encode(
-        x=alt.X('created_at', title='Time'),
-        y=alt.Y('score', title='Sentiment Score (-1 to 1)'),
+    # Base Chart
+    base = alt.Chart(df).encode(x='created_at:T')
+
+    # Layer A: Price Line (Right Axis)
+    line = base.mark_line(color='#FFA500', opacity=0.5).encode(
+        y=alt.Y('btc_price', axis=alt.Axis(title='Bitcoin Price ($)', titleColor='#FFA500')),
+        tooltip=['created_at', 'btc_price']
+    )
+
+    # Layer B: Sentiment Dots (Left Axis)
+    points = base.mark_circle(size=100).encode(
+        y=alt.Y('score', axis=alt.Axis(title='Sentiment Score (-1 to 1)')),
         color=alt.Color('sentiment', scale=alt.Scale(domain=['POSITIVE', 'NEGATIVE', 'NEUTRAL'], range=['green', 'red', 'gray'])),
-        tooltip=['headline', 'reason', 'score', 'created_at']
+        tooltip=['headline', 'score', 'btc_price', 'reason']
     ).interactive()
+
+    # Combine them
+    chart = alt.layer(line, points).resolve_scale(
+        y='independent' # This creates the dual axis!
+    )
     
     st.altair_chart(chart, use_container_width=True)
 
-    # 5. Detailed Logs
+    # 4. Logs
     st.divider()
-    st.subheader("🔍 Analyst Logs (Llama 3 Reasoning)")
-    
+    st.subheader("🔍 Analysis Logs")
     for index, row in df.iterrows():
         icon = "⚪"
         if row['sentiment'] == "POSITIVE": icon = "🟢"
@@ -89,7 +101,7 @@ if not df.empty:
         
         with st.expander(f"{icon} {row['headline']}"):
             st.write(f"**AI Reasoning:** {row['reason']}")
-            st.caption(f"Score: {row['score']} | Time: {row['created_at']}")
+            st.caption(f"Price: ${row['btc_price']:,.2f} | Score: {row['score']} | Time: {row['created_at']}")
 
 else:
-    st.info("Waiting for data... Run your Lambda Producer to fetch news!")
+    st.info("Waiting for data... Run your Lambda Producer!")
