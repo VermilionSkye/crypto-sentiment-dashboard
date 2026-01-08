@@ -25,7 +25,7 @@ def get_db_connection():
 def get_sentiment_data():
     conn = get_db_connection()
     if conn:
-        # NOW FETCHING 'btc_price' TOO
+        # UPDATED: We removed 'COALESCE' so we can detect real missing data (None)
         query = """
             SELECT headline, sentiment, score, reason, btc_price, created_at 
             FROM raw_data.crypto_sentiment
@@ -41,7 +41,6 @@ def get_sentiment_data():
 st.title("🧠 AI Crypto Analyst")
 st.caption("Correlating Bitcoin News Sentiment with Price Action")
 
-# 1. Refresh
 if st.button("🔄 Refresh Data"):
     st.cache_data.clear()
     st.rerun()
@@ -49,7 +48,6 @@ if st.button("🔄 Refresh Data"):
 df = get_sentiment_data()
 
 if not df.empty:
-    # 2. Key Metrics
     latest = df.iloc[0]
     
     col1, col2, col3, col4 = st.columns(4)
@@ -60,38 +58,45 @@ if not df.empty:
     if latest['sentiment'] == "NEGATIVE": sent_color = "inverse"
     
     col1.metric("Latest Sentiment", latest['sentiment'], f"{latest['score']:.2f}", delta_color=sent_color)
-    col2.metric("BTC Price", f"${latest['btc_price']:,.2f}") # NEW METRIC
+    
+    # --- LOGIC UPDATE: Handle Missing Prices ---
+    price = latest['btc_price']
+    
+    # Check if price exists (not None) and is greater than 0
+    if pd.notna(price) and price > 0:
+        price_display = f"${price:,.2f}"
+    else:
+        price_display = "—"  # The Dash you wanted
+        
+    col2.metric("BTC Price", price_display) 
+    # -------------------------------------------
+    
     col3.metric("Data Points", len(df))
     col4.markdown(f"**Latest News:**\n_{latest['headline'][:50]}..._")
 
-    # 3. THE DUAL-AXIS CHART
+    # --- DUAL AXIS CHART ---
     st.divider()
     st.subheader("Sentiment vs. Price Correlation")
     
-    # Base Chart
     base = alt.Chart(df).encode(x='created_at:T')
 
-    # Layer A: Price Line (Right Axis)
+    # Note: Altair automatically skips 'None' values, creating gaps in the line 
+    # which is exactly what we want for missing data!
     line = base.mark_line(color='#FFA500', opacity=0.5).encode(
         y=alt.Y('btc_price', axis=alt.Axis(title='Bitcoin Price ($)', titleColor='#FFA500')),
         tooltip=['created_at', 'btc_price']
     )
 
-    # Layer B: Sentiment Dots (Left Axis)
     points = base.mark_circle(size=100).encode(
         y=alt.Y('score', axis=alt.Axis(title='Sentiment Score (-1 to 1)')),
         color=alt.Color('sentiment', scale=alt.Scale(domain=['POSITIVE', 'NEGATIVE', 'NEUTRAL'], range=['green', 'red', 'gray'])),
         tooltip=['headline', 'score', 'btc_price', 'reason']
     ).interactive()
 
-    # Combine them
-    chart = alt.layer(line, points).resolve_scale(
-        y='independent' # This creates the dual axis!
-    )
-    
+    chart = alt.layer(line, points).resolve_scale(y='independent')
     st.altair_chart(chart, use_container_width=True)
 
-    # 4. Logs
+    # --- LOGS ---
     st.divider()
     st.subheader("🔍 Analysis Logs")
     for index, row in df.iterrows():
@@ -99,9 +104,13 @@ if not df.empty:
         if row['sentiment'] == "POSITIVE": icon = "🟢"
         if row['sentiment'] == "NEGATIVE": icon = "🔴"
         
+        # Helper to format price in logs too
+        p_val = row['btc_price']
+        p_str = f"${p_val:,.2f}" if (pd.notna(p_val) and p_val > 0) else "—"
+        
         with st.expander(f"{icon} {row['headline']}"):
             st.write(f"**AI Reasoning:** {row['reason']}")
-            st.caption(f"Price: ${row['btc_price']:,.2f} | Score: {row['score']} | Time: {row['created_at']}")
+            st.caption(f"Price: {p_str} | Score: {row['score']} | Time: {row['created_at']}")
 
 else:
     st.info("Waiting for data... Run your Lambda Producer!")
