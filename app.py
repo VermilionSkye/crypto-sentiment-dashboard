@@ -7,7 +7,6 @@ import altair as alt
 st.set_page_config(page_title="Crypto Sentiment AI", page_icon="🧠", layout="wide")
 
 # --- DB CONNECTION ---
-# 1. REMOVE @st.cache_resource so we get a fresh connection every time
 def get_db_connection():
     try:
         conn = psycopg2.connect(
@@ -31,12 +30,11 @@ def get_sentiment_data():
             ORDER BY created_at DESC
             LIMIT 100
         """
-        # 2. Pandas opens the cursor, reads, and we leave it be.
         df = pd.read_sql(query, conn)
+        conn.close()
         
-        # 3. Close manually to be clean, BUT since we removed cache, 
-        # it won't break the next run.
-        conn.close() 
+        # THE FIX: Force 'btc_price' to be numeric. 
+        df['btc_price'] = pd.to_numeric(df['btc_price'], errors='coerce')
         
         return df
     return pd.DataFrame()
@@ -63,7 +61,7 @@ if not df.empty:
     
     col1.metric("Latest Sentiment", latest['sentiment'], f"{latest['score']:.2f}", delta_color=sent_color)
     
-    # Logic for Price Dash
+    # Price Display Logic
     price = latest['btc_price']
     if pd.notna(price) and price > 0:
         price_display = f"${price:,.2f}"
@@ -80,11 +78,13 @@ if not df.empty:
     
     base = alt.Chart(df).encode(x='created_at:T')
 
+    # Line Chart (Price) 
     line = base.mark_line(color='#FFA500', opacity=0.5).encode(
         y=alt.Y('btc_price', axis=alt.Axis(title='Bitcoin Price ($)', titleColor='#FFA500')),
         tooltip=['created_at', 'btc_price']
     )
 
+    # Dot Chart (Sentiment)
     points = base.mark_circle(size=100).encode(
         y=alt.Y('score', axis=alt.Axis(title='Sentiment Score (-1 to 1)')),
         color=alt.Color('sentiment', scale=alt.Scale(domain=['POSITIVE', 'NEGATIVE', 'NEUTRAL'], range=['green', 'red', 'gray'])),
