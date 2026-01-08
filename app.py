@@ -7,7 +7,7 @@ import altair as alt
 st.set_page_config(page_title="Crypto Sentiment AI", page_icon="🧠", layout="wide")
 
 # --- DB CONNECTION ---
-@st.cache_resource
+# 1. REMOVE @st.cache_resource so we get a fresh connection every time
 def get_db_connection():
     try:
         conn = psycopg2.connect(
@@ -25,15 +25,19 @@ def get_db_connection():
 def get_sentiment_data():
     conn = get_db_connection()
     if conn:
-        # UPDATED: We removed 'COALESCE' so we can detect real missing data (None)
         query = """
             SELECT headline, sentiment, score, reason, btc_price, created_at 
             FROM raw_data.crypto_sentiment
             ORDER BY created_at DESC
             LIMIT 100
         """
+        # 2. Pandas opens the cursor, reads, and we leave it be.
         df = pd.read_sql(query, conn)
-        conn.close()
+        
+        # 3. Close manually to be clean, BUT since we removed cache, 
+        # it won't break the next run.
+        conn.close() 
+        
         return df
     return pd.DataFrame()
 
@@ -59,18 +63,14 @@ if not df.empty:
     
     col1.metric("Latest Sentiment", latest['sentiment'], f"{latest['score']:.2f}", delta_color=sent_color)
     
-    # --- LOGIC UPDATE: Handle Missing Prices ---
+    # Logic for Price Dash
     price = latest['btc_price']
-    
-    # Check if price exists (not None) and is greater than 0
     if pd.notna(price) and price > 0:
         price_display = f"${price:,.2f}"
     else:
-        price_display = "—"  # The Dash you wanted
+        price_display = "—"
         
     col2.metric("BTC Price", price_display) 
-    # -------------------------------------------
-    
     col3.metric("Data Points", len(df))
     col4.markdown(f"**Latest News:**\n_{latest['headline'][:50]}..._")
 
@@ -80,8 +80,6 @@ if not df.empty:
     
     base = alt.Chart(df).encode(x='created_at:T')
 
-    # Note: Altair automatically skips 'None' values, creating gaps in the line 
-    # which is exactly what we want for missing data!
     line = base.mark_line(color='#FFA500', opacity=0.5).encode(
         y=alt.Y('btc_price', axis=alt.Axis(title='Bitcoin Price ($)', titleColor='#FFA500')),
         tooltip=['created_at', 'btc_price']
@@ -104,7 +102,6 @@ if not df.empty:
         if row['sentiment'] == "POSITIVE": icon = "🟢"
         if row['sentiment'] == "NEGATIVE": icon = "🔴"
         
-        # Helper to format price in logs too
         p_val = row['btc_price']
         p_str = f"${p_val:,.2f}" if (pd.notna(p_val) and p_val > 0) else "—"
         
