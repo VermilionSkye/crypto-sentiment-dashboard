@@ -1,8 +1,9 @@
 import psycopg2
-# ⚠️ PASTE YOUR ACTUAL CREDENTIALS (or use st.secrets if running via Streamlit)
-DB_HOST = "de-project-db.c7cq8ky609tw.eu-north-1.rds.amazonaws.com"
-DB_USER = "tani"
-DB_PASSWORD = "QwUqK8H2YKP6l3gDnyh9"
+import streamlit as st
+
+DB_HOST = st.secrets["DB_HOST"]
+DB_USER = st.secrets["DB_USER"]
+DB_PASSWORD = st.secrets["DB_PASSWORD"]
 
 try:
     print("🔌 Connecting...")
