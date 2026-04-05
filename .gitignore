@@ -1,14 +1,14 @@
-# Ignore Streamlit secrets (CRITICAL)
+# Streamlit secrets
 .streamlit/secrets.toml
 
-# Ignore Python cache files
+# Python cache files
 __pycache__/
 *.pyc
 
-# Ignore environment folders (if you use venv)
+# Environment folders 
 venv/
 env/
 .env
 
-# Ignore system files
+# system files
 .DS_Store
