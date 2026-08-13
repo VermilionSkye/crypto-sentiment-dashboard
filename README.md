@@ -56,3 +56,5 @@ This project demonstrates a decoupled "Producer-Consumer" architecture:
 ## Live Demo
 
 [https://crypto-sentiment-dashboard-vs.streamlit.app/]
+
+Currently moving my DB to supabase. AWS free tier access expired :(
